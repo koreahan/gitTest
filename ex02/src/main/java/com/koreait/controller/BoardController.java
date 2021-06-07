@@ -39,7 +39,6 @@ public class BoardController {
 	@GetMapping("/list")
 	public void list(Criteria cri, Model model) {
 		log.info("list");
-		log.info("list222");
 		model.addAttribute("list", service.getList(cri));
 		//getTotal(Criteria) : type과 keyword가 전달되면 검색된 게시글의 건수이며, 검색하지 않으면 전체 게시글의 건수이다.
 		model.addAttribute("pageMaker", new PageDTO(cri, service.getTotal(cri)));
