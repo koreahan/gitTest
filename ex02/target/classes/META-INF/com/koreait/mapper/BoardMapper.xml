@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.koreait.mapper.BoardMapper">
+	<select id="getList" resultType="com.koreait.domain.BoardVO">
+		<![CDATA[
+			SELECT * FROM TBL_BOARD WHERE BNO > 0
+		]]>
+	</select>
+	
+	<sql id="criteria">
+		<!-- [3] -->
+		<!-- Mapper 인터페이스로부터 전달받은 Criteria객체 안의 type과 keyword 둘 다 null이 아니라면 -->
+		<if test="type != null and keyword != null">
+			<!-- [7] -->
+			<!-- trim 태그 안에 있는 쿼리문을 기준으로 가장 앞에 있는 OR를 없애준다. -->
+			<!-- trim 태그 안에 있는 쿼리문 뒤에는 페이징 처리 조건식이 한 개 더 있기 때문에 마지막에(suffix) AND를 붙여준다. -->
+			<trim prefix="(" suffix=") AND" prefixOverrides="OR">
+				<!-- [4] -->
+				<!-- Criteria에 선언된 getTypeArr()메소드를 호출하여 단일항목이 들어 있는 배열의 길이만큼 반복해준다. -->
+				<!-- 각각의 단일 항목들이 item속성에 있는 type변수에 들어가게 된다. -->
+				<!-- 예 : "TW"는 2칸 문자열 배열이며, 2번 반복된다. [2]참고 -->
+				<foreach item="type" collection="typeArr">
+					<!-- [6] -->
+					<!-- 작성된 쿼리문마다 맨 앞에(prefix) OR를 붙여준다. -->
+					<trim prefix="OR">
+						<!-- [5] -->
+						<!-- 단일 항목 중 조건식이 참이라면 알맞는 쿼리문이 작성된다. -->
+						<choose>
+							<when test="type=='T'.toString()">
+								(TITLE LIKE '%'||#{keyword}||'%')
+							</when>
+							<when test="type=='C'.toString()">
+								(CONTENT LIKE '%'||#{keyword}||'%')
+							</when>
+							<when test="type=='W'.toString()">
+								(WRITER LIKE '%'||#{keyword}||'%')
+							</when>
+						</choose>
+					</trim>
+				</foreach>
+			</trim>
+		</if>
+	</sql>
+	
+	<select id="getListWithPaging" resultType="com.koreait.domain.BoardVO">
+			SELECT BNO, TITLE, CONTENT, WRITER, REGDATE, UPDATEDATE, REPLYCNT 
+			FROM 
+				(SELECT /*+ INDEX_DESC(TBL_BOARD PK_BOARD) */ ROWNUM RN, BNO, TITLE, CONTENT, WRITER, REGDATE, UPDATEDATE, REPLYCNT 
+				FROM TBL_BOARD
+				WHERE 
+				<include refid="criteria"/>
+		<![CDATA[		
+				ROWNUM <= #{pageNum} * #{amount})
+			WHERE RN > (#{pageNum} - 1) * #{amount}
+		]]>
+	</select>
+	
+	<!-- 검색된 게시물의 전체 개수 -->
+<!-- 	<select id="getTotal" resultType="_int">
+		SELECT COUNT(BNO) FROM TBL_BOARD WHERE
+		<include refid="criteria"/>
+		<![CDATA[BNO > 0]]>
+	</select> -->
+	
+	<select id="getTotal" resultType="_int">
+		SELECT COUNT(BNO) FROM TBL_BOARD
+		<where>
+			<trim suffixOverrides="AND">
+				<include refid="criteria"/>
+			</trim>
+		</where>
+	</select>
+	
+	<insert id="insert">
+		INSERT INTO TBL_BOARD (BNO, TITLE, CONTENT, WRITER) 
+		VALUES(SEQ_BOARD.NEXTVAL, #{title}, #{content}, #{writer})
+	</insert>
+	<!-- 
+		PK값을 미리 SQL을 통해서 처리하는 방식
+		SQL을 한 번 더 실행하는 부담이 있기는 하지만 자동으로 추가되는 PK값을 확인해야 하는 상황에서는
+		유용하게 사용될 수 있다.
+	-->
+	<insert id="insertSelectKey_bno">
+		<selectKey keyProperty="bno" order="BEFORE" resultType="long">
+			SELECT SEQ_BOARD.NEXTVAL FROM DUAL
+		</selectKey>
+		INSERT INTO TBL_BOARD (BNO, TITLE, CONTENT, WRITER) 
+		VALUES(#{bno}, #{title}, #{content}, #{writer})
+	</insert>
+	
+	<select id="read" resultType="com.koreait.domain.BoardVO">
+		SELECT * FROM TBL_BOARD WHERE BNO = #{bno}
+	</select>
+	
+	<delete id="delete">
+		DELETE FROM TBL_BOARD WHERE BNO = #{bno}
+	</delete>
+
+	<update id="update">
+		UPDATE TBL_BOARD
+		SET TITLE = #{title}, CONTENT = #{content}, WRITER = #{writer}, UPDATEDATE = SYSDATE
+		WHERE BNO = #{bno}
+	</update>
+	
+	<update id="updateReplyCnt">
+		UPDATE TBL_BOARD
+		SET REPLYCNT = REPLYCNT + #{amount}
+		WHERE BNO = #{bno}
+	</update>
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
